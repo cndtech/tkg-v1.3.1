@@ -1,0 +1,1 @@
+kubectl create secret generic harbor-data-values --from-file=values.yaml=$HOME/131/extensions/registry/harbor/harbor-data-values.yaml -n tanzu-system-registry -o yaml --dry-run=client | kubectl replace -f -

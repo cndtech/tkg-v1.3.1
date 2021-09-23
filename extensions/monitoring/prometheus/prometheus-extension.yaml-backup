@@ -1,0 +1,65 @@
+---
+apiVersion: kappctrl.k14s.io/v1alpha1
+kind: App
+metadata:
+  name: prometheus
+  namespace: tanzu-system-monitoring
+  annotations:
+    tmc.cloud.vmware.com/managed: "false"
+spec:
+  syncPeriod: 5m
+  serviceAccountName: prometheus-extension-sa
+  fetch:
+    - image:
+        url: projects.registry.vmware.com/tkg/tkg-extensions-templates:v1.3.1_vmware.1
+  template:
+    - ytt:
+        ignoreUnknownComments: true
+        paths:
+          - tkg-extensions/common
+          - tkg-extensions/monitoring/prometheus
+        inline:
+          paths:
+            update-alertmanager.yaml: |
+              #@ load("@ytt:overlay", "overlay")
+              #@overlay/match by=overlay.subset({"kind": "Deployment", "metadata": {"name": "prometheus-alertmanager"}})
+              ---
+              spec:
+                template:
+                  spec:
+                    #@overlay/match missing_ok=True
+                    imagePullSecrets:
+                    #@overlay/match by=overlay.index(0)
+                    - name: vm-harbor-secret
+                    containers:
+                    #@overlay/replace
+                    #@overlay/match by="name"
+                    - name: prometheus-alertmanager
+                      image: registry.tkg.vmware.run/prometheus/alertmanager:v0.20.0_vmware.1
+                      imagePullPolicy: "IfNotPresent"
+                      args:
+                        - --config.file=/etc/config/alertmanager.yml
+                        - --storage.path=/data
+                        - --cluster.listen-address=
+                      ports:
+                        - containerPort: 80
+                      readinessProbe:
+                        httpGet:
+                          path: /-/ready
+                          port: 9093
+                        initialDelaySeconds: 30
+                        timeoutSeconds: 30
+                      resources:
+                        {}
+                      volumeMounts:
+                        - name: config-volume
+                          mountPath: /etc/config
+                        - name: storage-volume
+                          mountPath: "/data"
+                          subPath: ""
+              pathsFrom:
+                - secretRef:
+                    name: prometheus-data-values
+      deploy:
+        - kapp:
+            rawOptions: ["--wait-timeout=5m"]

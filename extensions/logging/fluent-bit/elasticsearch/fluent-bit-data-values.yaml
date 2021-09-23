@@ -1,0 +1,14 @@
+#@data/values
+#@overlay/match-child-defaults missing_ok=True
+---
+logging:
+  image:
+    repository: projects.registry.vmware.com/tkg
+tkg:
+  instance_name: "nirs-tkg"
+  cluster_name: "test-tkc"
+fluent_bit:
+  output_plugin: "elasticsearch"
+  elasticsearch:
+    host: "1.1.1.1"
+    port: "9200"

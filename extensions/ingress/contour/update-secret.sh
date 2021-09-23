@@ -1,0 +1,1 @@
+kubectl create secret generic contour-data-values --from-file=values.yaml=$HOME/131/extensions/ingress/contour/vsphere/contour-data-values.yaml -n tanzu-system-ingress -o yaml --dry-run=client | kubectl replace -f -
